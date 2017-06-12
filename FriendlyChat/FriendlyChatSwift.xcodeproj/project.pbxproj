@@ -13,6 +13,8 @@
 		2C8562871AFAB65F00F0B24B /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2C85627F1AFAB65F00F0B24B /* LaunchScreen.xib */; };
 		5F5A537E1ADE67D500F81DF0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F5A537D1ADE67D500F81DF0 /* AppDelegate.swift */; };
 		5F5A53801ADE67D500F81DF0 /* FCViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F5A537F1ADE67D500F81DF0 /* FCViewController.swift */; };
+		A158A2C01EC6E22D00D3D296 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A158A2BF1EC6E22D00D3D296 /* GoogleService-Info.plist */; };
+		A1738EB41EC97B3F0022263B /* FCTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1738EB31EC97B3F0022263B /* FCTableViewCell.swift */; };
 		A92476E81D6F96C300A96C4B /* Roboto-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A92476E61D6F96C300A96C4B /* Roboto-Regular.ttf */; };
 		A92476E91D6F96C300A96C4B /* RobotoMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A92476E71D6F96C300A96C4B /* RobotoMono-Regular.ttf */; };
 		DBBAAE069585D787FD06FE15 /* Pods_FriendlyChatSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9EE776B645030DD333883549 /* Pods_FriendlyChatSwift.framework */; };
@@ -29,6 +31,8 @@
 		5F5A537D1ADE67D500F81DF0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5F5A537F1ADE67D500F81DF0 /* FCViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCViewController.swift; sourceTree = "<group>"; };
 		9EE776B645030DD333883549 /* Pods_FriendlyChatSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FriendlyChatSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A158A2BF1EC6E22D00D3D296 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A1738EB31EC97B3F0022263B /* FCTableViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FCTableViewCell.swift; sourceTree = "<group>"; };
 		A92476E61D6F96C300A96C4B /* Roboto-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Regular.ttf"; sourceTree = "<group>"; };
 		A92476E71D6F96C300A96C4B /* RobotoMono-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "RobotoMono-Regular.ttf"; sourceTree = "<group>"; };
 		F3514636A3BDB21360D87272 /* Pods-FriendlyChatSwift.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FriendlyChatSwift.release.xcconfig"; path = "Pods/Target Support Files/Pods-FriendlyChatSwift/Pods-FriendlyChatSwift.release.xcconfig"; sourceTree = "<group>"; };
@@ -92,6 +96,7 @@
 				5F5A537F1ADE67D500F81DF0 /* FCViewController.swift */,
 				2C595F041B34B73A00355AE7 /* Constants.swift */,
 				5F5A537B1ADE67D500F81DF0 /* Supporting Files */,
+				A1738EB31EC97B3F0022263B /* FCTableViewCell.swift */,
 			);
 			path = FriendlyChatSwift;
 			sourceTree = "<group>";
@@ -99,6 +104,7 @@
 		5F5A537B1ADE67D500F81DF0 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				A158A2BF1EC6E22D00D3D296 /* GoogleService-Info.plist */,
 				107960711C612531003DB6CC /* Main.storyboard */,
 				107960741C61253B003DB6CC /* Info.plist */,
 				2C85627A1AFAB65F00F0B24B /* shared */,
@@ -190,6 +196,7 @@
 				A92476E81D6F96C300A96C4B /* Roboto-Regular.ttf in Resources */,
 				2C8562851AFAB65F00F0B24B /* Images.xcassets in Resources */,
 				A92476E91D6F96C300A96C4B /* RobotoMono-Regular.ttf in Resources */,
+				A158A2C01EC6E22D00D3D296 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,7 +230,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_ROOT}/../Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [[ $? != 0 ]] ; then\n    cat << EOM\nerror: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\nEOM\n    exit 1\nfi\n";
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 		ED8993B59ED135CE7FC6FF4D /* [CP] Copy Pods Resources */ = {
@@ -248,6 +255,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1738EB41EC97B3F0022263B /* FCTableViewCell.swift in Sources */,
 				5F5A53801ADE67D500F81DF0 /* FCViewController.swift in Sources */,
 				5F5A537E1ADE67D500F81DF0 /* AppDelegate.swift in Sources */,
 				2C595F061B34B73A00355AE7 /* Constants.swift in Sources */,

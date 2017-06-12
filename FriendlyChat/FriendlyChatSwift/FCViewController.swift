@@ -16,7 +16,9 @@
 
 import UIKit
 import Firebase
+import FirebaseDatabaseUI
 import FirebaseAuthUI
+import FirebaseGoogleAuthUI
 
 // MARK: - FCViewController
 
@@ -26,6 +28,7 @@ class FCViewController: UIViewController, UINavigationControllerDelegate {
     
     var ref: FIRDatabaseReference!
     var messages: [FIRDataSnapshot]! = []
+    fileprivate var message: FIRDataSnapshot!
     var msglength: NSNumber = 1000
     var storageRef: FIRStorageReference!
     var remoteConfig: FIRRemoteConfig!
@@ -35,6 +38,8 @@ class FCViewController: UIViewController, UINavigationControllerDelegate {
     fileprivate var _refHandle: FIRDatabaseHandle!
     fileprivate var _authHandle: FIRAuthStateDidChangeListenerHandle!
     var user: FIRUser?
+    var dataSource: FUITableViewDataSource!
+    fileprivate var query: FIRDatabaseQuery?
     var displayName = "Anonymous"
     
     // MARK: Outlets
@@ -53,9 +58,9 @@ class FCViewController: UIViewController, UINavigationControllerDelegate {
     // MARK: Life Cycle
     
     override func viewDidLoad() {
-        self.signedInStatus(isSignedIn: true)
-        
-        // TODO: Handle what users see when view loads
+        super.viewDidLoad()
+        self.messagesTable.delegate = self
+        configureAuth()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -66,29 +71,92 @@ class FCViewController: UIViewController, UINavigationControllerDelegate {
     // MARK: Config
     
     func configureAuth() {
+        let provider: [FUIAuthProvider] = [FUIGoogleAuth()]
+        FUIAuth.defaultAuthUI()?.providers = provider
+        
         // TODO: configure firebase authentication
+        _authHandle = FIRAuth.auth()?.addStateDidChangeListener { (auth: FIRAuth, user: FIRUser?) in
+            // refresh table data
+            self.messages.removeAll(keepingCapacity: false)
+            self.messagesTable.reloadData()
+            
+            // check if there is a current user
+            if let activeUser = user {
+                // check if the curren app user is the current FIRUser
+                if self.user != activeUser {
+                    self.user = activeUser
+                    self.signedInStatus(isSignedIn: true)
+                    let name = user!.email!.components(separatedBy: "@")[0]
+                    self.displayName = name
+                }
+            } else {
+                // user must sign in 
+                self.signedInStatus(isSignedIn: false)
+                self.loginSession()
+            }
+        }
     }
     
     func configureDatabase() {
         // TODO: configure database to sync messages
+        
+        ref = FIRDatabase.database().reference()
+        _refHandle = ref.child("messages").observe(.childAdded) { (snapshot: FIRDataSnapshot) in
+            self.messages.append(snapshot)
+            self.messagesTable.insertRows(at: [IndexPath(row: self.messages.count - 1, section: 0)], with: .automatic)
+            self.scrollToBottomMessage()
+        }
+        
+        // my implementation to reload remote changed objects
+        _refHandle = ref.child("messages").observe(.childChanged) { (snapshot: FIRDataSnapshot) in
+            if let index = self.messages.index(where: { $0.key == snapshot.key }) {
+                self.messages.remove(at: index)
+                self.messages.append(snapshot)
+                self.messagesTable.reloadData()
+            }
+        }
     }
     
     func configureStorage() {
         // TODO: configure storage using your firebase storage
+        storageRef = FIRStorage.storage().reference()
+        
     }
     
     deinit {
-        // TODO: set up what needs to be deinitialized when view is no longer being used
+        // TODO: set up what needs to be deinitialized when view is no longer being used 
+        ref.child("messages").removeObserver(withHandle: _refHandle)
+        FIRAuth.auth()?.removeStateDidChangeListener(_authHandle)
     }
     
     // MARK: Remote Config
     
     func configureRemoteConfig() {
-        // TODO: configure remote configuration settings
+        //  create remote config setting to enable devoloper mode
+        let remoteConfigSettings = FIRRemoteConfigSettings(developerModeEnabled: true)
+        remoteConfig = FIRRemoteConfig.remoteConfig()
+        remoteConfig.configSettings = remoteConfigSettings!
     }
     
     func fetchConfig() {
-        // TODO: update to the current coniguratation
+        var expirationDuration: Double = 3600
+        if remoteConfig.configSettings.isDeveloperModeEnabled {
+            expirationDuration = 0
+        }
+        
+        remoteConfig.fetch(withExpirationDuration: expirationDuration) { (status, error) in
+            if status == .success {
+                print("config fetched")
+                self.remoteConfig.activateFetched()
+                let friendlyMsgLength = self.remoteConfig["friendly_msg_length"]
+                if friendlyMsgLength.source != .static {
+                    self.msglength = friendlyMsgLength.numberValue!
+                    print("msg length: \(self.msglength)")
+                }
+            } else {
+                print("config not fetched, error: \(error!)")
+            }
+        }
     }
     
     // MARK: Sign In and Out
@@ -110,6 +178,10 @@ class FCViewController: UIViewController, UINavigationControllerDelegate {
             messageTextField.delegate = self
             
             // TODO: Set up app to send and receive messages when signed in
+            configureDatabase()
+            configureStorage()
+            configureRemoteConfig()
+            fetchConfig()
         }
     }
     
@@ -122,10 +194,29 @@ class FCViewController: UIViewController, UINavigationControllerDelegate {
     
     func sendMessage(data: [String:String]) {
         // TODO: create method that pushes message to the firebase database
+        var mdata = data
+        mdata[Constants.MessageFields.name] = displayName
+        ref.child("messages").childByAutoId().setValue(mdata)
     }
     
     func sendPhotoMessage(photoData: Data) {
-        // TODO: create method that pushes message w/ photo to the firebase database
+        // build a path using the users ID and a timestamp
+        let imagePath = "chat_photos/" + FIRAuth.auth()!.currentUser!.uid +  "/\(Double(Date.timeIntervalSinceReferenceDate * 1000)).jpg"
+        
+        // set content type to image/jpeg in firebase storage meta data
+        let metadata = FIRStorageMetadata()
+        metadata.contentType = "image/jpeg"
+        
+        // creat a chlid node at imagePath with photoData and metadata
+        storageRef!.child(imagePath).put(photoData, metadata: metadata) { (metadata, error) in
+            if let error = error {
+                print("error uploading image: \(error)")
+                return
+            }
+            
+            // use send message to add image URL to database
+            self.sendMessage(data: [Constants.MessageFields.imageUrl: self.storageRef!.child((metadata?.path)!).description])
+        }
     }
     
     // MARK: Alert
@@ -201,8 +292,41 @@ extension FCViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         // dequeue cell
         let cell: UITableViewCell! = messagesTable.dequeueReusableCell(withIdentifier: "messageCell", for: indexPath)
-        return cell!
+        
         // TODO: update cell to display message data
+        let messageSnapshot: FIRDataSnapshot! = messages[indexPath.row]
+        let message = messageSnapshot.value as! [String: String]
+        
+        let name = message[Constants.MessageFields.name] ?? "[username]"
+        
+        // if photo message, then grab image and display it
+        if let imageUrl = message[Constants.MessageFields.imageUrl] {
+            print("download image: \(imageUrl)")
+            cell.textLabel?.text = "sent by:\(name)"
+            // download and display image
+            FIRStorage.storage().reference(forURL: imageUrl).data(withMaxSize: INT64_MAX) { (data, error) in
+                guard error == nil else {
+                    print("error downloading: \(error!)")
+                    return
+                }
+                
+                // display image
+                let messageImage = UIImage.init(data: data!, scale: 50)
+                // check if the cell is still on screen, if so, update cell image
+                if cell == tableView.cellForRow(at: indexPath) {
+                    DispatchQueue.main.async {
+                        cell.imageView?.image = messageImage
+                        cell.setNeedsLayout()
+                    }
+                }
+            }
+        } else {
+            // otherwise, update cell for regular message
+            let text = message[Constants.MessageFields.text] ?? "[message]"
+            cell!.textLabel?.text = name + ": " + text
+            cell!.imageView?.image = self.placeholderImage
+        }
+        return cell!
     }
     
     func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -210,7 +334,32 @@ extension FCViewController: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-            // TODO: if message contains an image, then display the image
+        // skip if keyboard is shown
+        guard !messageTextField.isFirstResponder else {
+            return
+        }
+        
+        // unpack message from firebase data snapshot
+        let messageSnapshot: FIRDataSnapshot! = messages[(indexPath as NSIndexPath).row]
+        let message = messageSnapshot.value as! [String: String]
+        
+        // if the row contains the key imageURL then we know its an image message
+        if let imageUrl = message[Constants.MessageFields.imageUrl] {
+            
+            if let cachedImage = imageCache.object(forKey: imageUrl as NSString) {
+                showImageDisplay(cachedImage)
+            } else {
+                FIRStorage.storage().reference(forURL: imageUrl).data(withMaxSize: INT64_MAX, completion: { (data, error) in
+                    guard error == nil else {
+                        print("Error downloading image: \(error!)")
+                        return
+                    }
+                    self.showImageDisplay(UIImage.init(data: data!)!)
+                })
+            }
+            
+        }
+        
     }
     
     // MARK: Show Image Display
